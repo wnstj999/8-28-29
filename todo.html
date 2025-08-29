@@ -6,11 +6,12 @@
   <link rel="stylesheet" href="css/todo.css"
 </head>
 <body>
-  <h1>:메모: 드래그 앤드 드롭 To-Do List</h1>
+  <h1>📑  드래그 앤드 드롭 To-Do List</h1>
   <div class="todo-list" id="todoList">
     <!-- JS에서 로드됨 -->
   </div>
   <button class="add-btn" id="addBtn">+ 할 일 추가</button>
+  <button id="shuffleBtn" class="add-btn">랜덤 섞기</button>
   <!-- 모달 -->
   <div class="modal" id="taskModal">
     <div class="modal-content">
@@ -22,7 +23,7 @@
       </div>
     </div>
   </div>
-
+<div class="toast-container" id="toastContainer"></div>
   <script src="js/todo.js"></script>
 </body>
 </html>
