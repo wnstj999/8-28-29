@@ -107,3 +107,62 @@
     .close-btn {
       background: #ddd;
     }
+       body {
+      font-family: "Pretendard", "Noto Sans KR", sans-serif;
+      margin: 0;
+      padding: 40px;
+      background: #F9FAFB;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      background: #1791DD;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #0f6fa9;
+    }
+
+    /* Toast Container */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 9999;
+    }
+
+    /* Toast */
+    .toast {
+      min-width: 200px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      color: white;
+      font-weight: 500;
+      background: linear-gradient(135deg, #1791DD, #13C1D6);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      opacity: 0;
+      transform: translateX(100%);
+      animation: slideIn 0.4s forwards, fadeOut 0.5s forwards 3.5s;
+    }
+
+    @keyframes slideIn {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: translateX(120%);
+      }
+    }

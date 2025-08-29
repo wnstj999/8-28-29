@@ -4,8 +4,11 @@ const taskInput = document.getElementById("taskInput");
 const addBtn = document.getElementById("addBtn");
 const saveBtn = document.getElementById("saveTask");
 const closeBtn = document.getElementById("closeModal");
+const shuffleBtn = document.getElementById("shuffleBtn"); // 랜덤 섞기 버튼
+
 let draggedItem = null;
-// 기본 데이터
+
+// ===== 기본 데이터 =====
 const defaultTasks = [
   "출근 / 이메일 확인",
   "팀 미팅",
@@ -18,43 +21,51 @@ const defaultTasks = [
   "보고서 정리",
   ":압정: 오늘 18시 퇴근 후 운동",
 ];
-// localStorage에서 불러오기
+
+// ===== localStorage load/save =====
 function loadTasks() {
   const saved = localStorage.getItem("todoList");
   return saved ? JSON.parse(saved) : defaultTasks;
 }
-// localStorage에 저장
-function saveTasks() {
-  const tasks = [...todoList.querySelectorAll(".task-text")].map(
-    (el) => el.textContent
-  );
+
+function saveTasks(tasks = null) {
+  if (!tasks) {
+    tasks = [...todoList.querySelectorAll(".task-text")].map(el => el.textContent);
+  }
   localStorage.setItem("todoList", JSON.stringify(tasks));
 }
-// 리스트 렌더링
+
+// ===== 리스트 렌더링 =====
 function renderTasks(tasks) {
   todoList.innerHTML = "";
   tasks.forEach((taskText) => {
     const taskEl = document.createElement("div");
     taskEl.className = "task";
     taskEl.draggable = true;
+
     const textSpan = document.createElement("span");
     textSpan.className = "task-text";
     textSpan.textContent = taskText;
+
     const delBtn = document.createElement("button");
     delBtn.className = "delete-btn";
-    delBtn.textContent = ":x:";
+    delBtn.textContent = "❌";   // ← 깨지는 ":x:" 대신 이모지 사용
     delBtn.addEventListener("click", () => {
       taskEl.remove();
       saveTasks();
+      showToast("🗑️ 할 일이 삭제되었습니다!", "error");
     });
+
     taskEl.appendChild(textSpan);
     taskEl.appendChild(delBtn);
     todoList.appendChild(taskEl);
   });
 }
-// 초기화
+
+// ===== 초기화 =====
 renderTasks(loadTasks());
-// Drag & Drop 이벤트
+
+// ===== Drag & Drop =====
 todoList.addEventListener("dragstart", (e) => {
   if (e.target.classList.contains("task")) {
     draggedItem = e.target;
@@ -66,6 +77,7 @@ todoList.addEventListener("dragend", (e) => {
     draggedItem = null;
     e.target.style.opacity = "1";
     saveTasks();
+    showToast("📌 순서가 변경되었습니다!");
   }
 });
 todoList.addEventListener("dragover", (e) => {
@@ -88,32 +100,70 @@ todoList.addEventListener("drop", (e) => {
     todoList.insertBefore(draggedItem, target);
   }
 });
-// 모달 열기
+
+// ===== 모달 =====
 addBtn.addEventListener("click", () => {
   taskModal.style.display = "flex";
   taskInput.value = "";
   taskInput.focus();
 });
-// 모달 닫기
+
 closeBtn.addEventListener("click", () => {
   taskModal.style.display = "none";
 });
-// 저장 버튼 클릭 시 새로운 task 추가
-saveBtn.addEventListener("click", () => {
-  const newTask = taskInput.value.trim();
-  if (newTask) {
-    const tasks = loadTasks();
-    tasks.push(newTask);
-    saveTasks();
-    renderTasks(tasks);
-    taskModal.style.display = "none";
-  } else {
-    alert("할 일을 입력하세요!");
-  }
-});
-// ESC 누르면 닫기
+
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     taskModal.style.display = "none";
   }
 });
+
+// ===== 저장 버튼 (새 task 추가) =====
+saveBtn.addEventListener("click", () => {
+  const newTask = taskInput.value.trim();
+  if (newTask) {  
+    const tasks = loadTasks();
+    tasks.push(newTask);
+    saveTasks(tasks);
+    renderTasks(tasks);
+    taskModal.style.display = "none";
+    showToast("✅ 새로운 할 일이 추가되었습니다!");
+  } else {
+    showToast("⚠️ 할 일을 입력하슈!", "error");
+  }
+});
+
+// ===== 랜덤 섞기 =====
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+shuffleBtn.addEventListener("click", () => {
+  let tasks = loadTasks();
+  tasks = shuffleArray(tasks);
+  saveTasks(tasks);
+  renderTasks(tasks);
+  showToast("🔀 목록이 랜덤하게 섞였습니다!");
+});
+
+// ===== Toast =====
+function showToast(message, type="success") {
+  const container = document.getElementById("toastContainer");
+  const toast = document.createElement("div");
+  toast.classList.add("toast");
+
+  if (type === "error") {
+    toast.style.background = "linear-gradient(135deg, #E53935, #E35D5B)";
+  }
+
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 2000);
+}
