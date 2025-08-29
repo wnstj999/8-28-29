@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>레트로 게시판 글쓰기</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #1a002b, #000000 70%);
+      background-size: cover;
+      font-family: 'Courier New', monospace;
+      color: #f0f0f0;
+    }
+    .retro-title {
+      font-size: 2.5rem;
+      font-weight: 900;
+      text-align: center;
+      background: linear-gradient(90deg, #ff0080, #7928ca, #2afadf);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 8px #ff00ff, 0 0 16px #00eaff;
+      letter-spacing: 2px;
+    }
+    .retro-box {
+      border: 2px solid #ff00ff;
+      background: rgba(20, 0, 40, 0.8);
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 12px #ff00ff, 0 0 24px #00eaff;
+    }
+    .retro-input {
+      background: #000;
+      border: 2px solid #00eaff;
+      color: #fff;
+      padding: 10px;
+      width: 100%;
+      font-size: 1rem;
+    }
+    .retro-input:focus {
+      outline: none;
+      box-shadow: 0 0 10px #ff00ff, 0 0 20px #00eaff;
+    }
+    .retro-btn {
+      padding: 12px 24px;
+      font-weight: bold;
+      border: 2px solid #ff00ff;
+      background: linear-gradient(45deg, #ff0080, #7928ca, #2afadf);
+      color: #fff;
+      text-shadow: 0 0 5px #000;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .retro-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 12px #ff00ff, 0 0 24px #00eaff;
+    }
+    label {
+      font-weight: bold;
+      color: #ffccff;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+  <div class="w-full max-w-3xl">
+    <h1 class="retro-title mb-10">🚀 Retro Board 글쓰기</h1>
+    
+    <form id="postForm">
+      <!-- 글쓴이 -->
+      <div class="retro-box">
+        <label for="writer">✍ 글쓴이</label>
+        <input type="text" id="writer" name="writer" required pattern="^[가-힣a-zA-Z ]{2,20}$" placeholder="작성자 이름"
+          class="retro-input" />
+      </div>
+
+      <!-- 제목 -->
+      <div class="retro-box">
+        <label for="title">📀 제목</label>
+        <input type="text" id="title" name="title" required pattern=".{2,50}" placeholder="게시글 제목"
+          class="retro-input" />
+      </div>
+
+      <!-- 내용 -->
+      <div class="retro-box">
+        <label for="content">💾 내용</label>
+        <textarea id="content" name="content" rows="6" required placeholder="게시글 내용을 입력하세요"
+          class="retro-input"></textarea>
+      </div>
+
+      <!-- 공개 여부 -->
+      <div class="retro-box">
+        <label>🔒 공개 여부</label><br />
+        <label><input type="radio" name="visibility" value="public" required /> 공개</label>
+        <label><input type="radio" name="visibility" value="private" /> 비공개</label>
+      </div>
+
+      <!-- 게시물 종류 -->
+      <div class="retro-box">
+        <label>🎶 게시물 종류</label><br />
+        <label><input type="checkbox" name="category" value="notice" /> 공지</label>
+        <label><input type="checkbox" name="category" value="general" /> 일반</label>
+        <label><input type="checkbox" name="category" value="question" /> 질문</label>
+        <label><input type="checkbox" name="category" value="review" /> 후기</label>
+      </div>
+
+      <!-- 버튼 -->
+      <div class="flex justify-end gap-4 mt-6">
+        <button type="reset" class="retro-btn">취소</button>
+        <button type="submit" class="retro-btn">등록하기</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById("postForm");
+    const storageKey = "retroDraft";
+
+    // 입력 중 자동 저장
+    form.addEventListener("input", () => {
+      const formData = new FormData(form);
+      const obj = {};
+      formData.forEach((value, key) => {
+        if(obj[key]) {
+          if(Array.isArray(obj[key])) obj[key].push(value);
+          else obj[key] = [obj[key], value];
+        } else obj[key] = value;
+      });
+      localStorage.setItem(storageKey, JSON.stringify(obj));
+    });
+
+    // 저장된 값 불러오기
+    window.addEventListener("DOMContentLoaded", () => {
+      const saved = localStorage.getItem(storageKey);
+      if(saved) {
+        const data = JSON.parse(saved);
+        Object.keys(data).forEach(key => {
+          const field = form.elements[key];
+          if(!field) return;
+          if(field.type === "radio") {
+            const radios = form.querySelectorAll(`[name="${key}"]`);
+            radios.forEach(r => { if(r.value === data[key]) r.checked = true; });
+          } else if(field.type === "checkbox") {
+            const checkboxes = form.querySelectorAll(`[name="${key}"]`);
+            checkboxes.forEach(c => {
+              if(Array.isArray(data[key])) {
+                if(data[key].includes(c.value)) c.checked = true;
+              } else {
+                if(c.value === data[key]) c.checked = true;
+              }
+            });
+          } else {
+            field.value = data[key];
+          }
+        });
+      }
+    });
+
+    // 제출 시 저장 + console 출력
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      console.clear();
+      console.log("===== 🚀 Retro Form Submit (요소별 상세) =====");
+
+      const elements = form.querySelectorAll("input, textarea, select");
+      elements.forEach(el => {
+        let info = {
+          id: el.id || "(없음)",
+          name: el.name || "(없음)",
+          type: el.type,
+        };
+
+        if (el.type === "checkbox" || el.type === "radio") {
+          info.checked = el.checked;
+          info.value = el.value;
+        } else {
+          info.value = el.value;
+        }
+
+        console.log(info);
+      });
+
+      console.log("===========================================");
+
+      // localStorage 저장 (게시글 배열)
+      const formData = new FormData(form);
+      const obj = {};
+      formData.forEach((value, key) => {
+        if(obj[key]) {
+          if(Array.isArray(obj[key])) obj[key].push(value);
+          else obj[key] = [obj[key], value];
+        } else obj[key] = value;
+      });
+
+      const posts = JSON.parse(localStorage.getItem("retroPosts") || "[]");
+      posts.push(obj);
+      localStorage.setItem("retroPosts", JSON.stringify(posts));
+      localStorage.removeItem(storageKey);
+
+      alert("🎉 레트로 게시글 저장 완료!");
+      form.reset();
+    });
+  </script>
+</body>
+</html>

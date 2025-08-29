@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Grid To-Do List</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --accent:#7c3aed; --muted:#9aa4b2;
+      --glass: rgba(255,255,255,0.03);
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%; margin:0; background:#0f1724; color:#e6edf3}
+    .wrap{max-width:880px; margin:40px auto; padding:28px; background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      border-radius:16px; box-shadow:0 8px 30px rgba(2,6,23,0.8);}
+    header{margin-bottom:18px; display:flex; justify-content:space-between; align-items:center}
+    header h1{font-size:20px; margin:0}
+    header p{margin:0; color:var(--muted); font-size:13px}
+    .sort-box{display:flex; gap:8px; align-items:center}
+    .sort-box select,.sort-box button{
+      padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);
+      background:var(--card); color:inherit; cursor:pointer;
+    }
+    .add-form{
+      display:grid; grid-template-columns: 1fr 1fr 120px auto;
+      gap:10px; margin-bottom:18px
+    }
+    .add-form input, .add-form select{
+      padding:10px 12px; border-radius:8px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:var(--card); color:inherit; outline:none;
+    }
+    .add-form button{
+      border:0; border-radius:8px;
+      background:var(--accent); color:white;
+      cursor:pointer; padding:10px 14px
+    }
+    .todo-list{display:grid; gap:10px; min-height:40px; padding:6px; border:1px dashed rgba(255,255,255,0.1); border-radius:8px}
+    .todo-list.drag-over { background:rgba(255,255,255,0.05); }
+    .task{
+      display:grid; grid-template-columns:40px 1fr 140px;
+      gap:12px; align-items:center;
+      background:var(--glass); padding:10px 12px; border-radius:10px;
+      transition: background 0.2s ease;
+    }
+    .task.dragging { opacity: 0.5; }
+    .task.drag-over { background: rgba(255,255,255,0.08); }
+    .task .chk{display:flex; justify-content:center}
+    .task input[type=checkbox]{width:18px; height:18px}
+    .task .title{font-size:15px; font-weight:500}
+    .task .note{font-size:13px; color:var(--muted); margin-top:4px}
+    .task .actions{display:flex; gap:6px; justify-content:flex-end}
+    .task .actions button {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      line-height: 1;
+      white-space: nowrap;
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+    .task .actions button:hover {
+      color: white;
+      background: rgba(255,255,255,0.06);
+    }
+    .badge{padding:4px 8px; font-size:12px; border-radius:999px}
+    .badge.high{background:#ef4444; color:white}
+    .badge.med{background:#f59e0b; color:white}
+    .badge.low{background:#9ca3af; color:black}
+    .task.completed{opacity:.6}
+    .task.completed .title{text-decoration:line-through; color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Grid 기반 To-Do List</h1>
+        <p>드래그 앤 드롭(빈 공간 가능) + 버튼으로 자동 정렬</p>
+      </div>
+      <div class="sort-box">
+        <select id="sortSelect">
+          <option value="default">기본 순서</option>
+          <option value="priorityLow">중요도 낮은→높은</option>
+          <option value="priorityHigh">중요도 높은→낮은</option>
+          <option value="titleAsc">제목 가나다순</option>
+          <option value="titleDesc">제목 역순</option>
+        </select>
+        <button id="autoSortBtn">표 정렬</button>
+      </div>
+    </header>
+    <form class="add-form" id="addForm">
+      <input id="taskInput" placeholder="할 일 제목" />
+      <input id="noteInput" placeholder="노트 (선택)" />
+      <select id="prioritySelect">
+        <option value="low">낮음</option>
+        <option value="med">중간</option>
+        <option value="high">높음</option>
+      </select>
+      <button type="submit">추가</button>
+    </form>
+    <div class="todo-list" id="todoList"></div>
+  </div>
+  <script>
+    const listEl = document.getElementById('todoList');
+    const form = document.getElementById('addForm');
+    const input = document.getElementById('taskInput');
+    const noteInput = document.getElementById('noteInput');
+    const prioritySel = document.getElementById('prioritySelect');
+    const sortSel = document.getElementById('sortSelect');
+    const autoSortBtn = document.getElementById('autoSortBtn');
+    let editId = null;
+    let dragSrcIndex = null;
+
+    function saveToStorage() {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+    function loadFromStorage() {
+      const data = localStorage.getItem("tasks");
+      if (data) { try { return JSON.parse(data); } catch { return []; } }
+      return [];
+    }
+
+    let tasks = loadFromStorage();
+    if (tasks.length === 0) {
+      tasks = [
+        {id:crypto.randomUUID(), title:'디자인 피드백 반영', note:'헤더 폰트 크기 조정', priority:'high', done:false},
+        {id:crypto.randomUUID(), title:'배포 스크립트 점검', note:'CI/CD 로그 확인', priority:'med', done:false},
+        {id:crypto.randomUUID(), title:'팀 회의 준비', note:'어젠다 3개', priority:'low', done:true}
+      ];
+    }
+
+    function sortTasks(arr) {
+      const mode = sortSel.value;
+      if (mode === "priorityLow") {
+        const order = {low:0, med:1, high:2};
+        return [...arr].sort((a,b)=>order[a.priority]-order[b.priority]);
+      }
+      if (mode === "priorityHigh") {
+        const order = {low:0, med:1, high:2};
+        return [...arr].sort((a,b)=>order[b.priority]-order[a.priority]);
+      }
+      if (mode === "titleAsc") return [...arr].sort((a,b)=>a.title.localeCompare(b.title,"ko"));
+      if (mode === "titleDesc") return [...arr].sort((a,b)=>b.title.localeCompare(a.title,"ko"));
+      return arr;
+    }
+
+    function render(){
+      listEl.innerHTML='';
+      let renderTasks = sortTasks(tasks);
+      renderTasks.forEach((t, index)=>{
+        const el=document.createElement('div');
+        el.className='task'+(t.done?' completed':'');
+        el.setAttribute('draggable','true');
+        el.dataset.id = t.id;
+
+        el.addEventListener('dragstart', e=>{
+          dragSrcIndex = tasks.indexOf(t);
+          el.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        el.addEventListener('dragend', ()=>{
+          el.classList.remove('dragging');
+          document.querySelectorAll('.task').forEach(task=>task.classList.remove('drag-over'));
+          listEl.classList.remove('drag-over');
+          saveToStorage();
+        });
+        el.addEventListener('dragover', e=>{
+          e.preventDefault();
+          el.classList.add('drag-over');
+        });
+        el.addEventListener('dragleave', ()=>{ el.classList.remove('drag-over'); });
+        el.addEventListener('drop', ()=>{
+          const targetIndex = tasks.indexOf(t);
+          if(dragSrcIndex!==null && dragSrcIndex!==targetIndex){
+            const moved = tasks.splice(dragSrcIndex,1)[0];
+            tasks.splice(targetIndex,0,moved);
+            render(); saveToStorage();
+          }
+        });
+
+        const chk=document.createElement('div'); chk.className='chk';
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=t.done;
+        cb.addEventListener('change',()=>{toggle(t.id); saveToStorage();});
+        chk.appendChild(cb);
+
+        const main=document.createElement('div');
+        const title=document.createElement('div'); title.className='title'; title.textContent=t.title;
+        main.appendChild(title);
+        if(t.note){
+          const note=document.createElement('div'); note.className='note'; note.textContent=t.note;
+          main.appendChild(note);
+        }
+
+        const actions=document.createElement('div'); actions.className='actions';
+        const badge=document.createElement('span'); badge.className='badge '+t.priority; badge.textContent=(t.priority==='high'?'높음':t.priority==='med'?'중간':'낮음');
+        const btnEdit=document.createElement('button'); btnEdit.innerHTML='✏ 수정';
+        btnEdit.addEventListener('click',()=>startEdit(t.id));
+        const btnDel=document.createElement('button'); btnDel.innerHTML='🗑 삭제';
+        btnDel.addEventListener('click',()=>{removeTask(t.id); saveToStorage();});
+        actions.appendChild(badge);
+        actions.appendChild(btnEdit);
+        actions.appendChild(btnDel);
+
+        el.appendChild(chk); el.appendChild(main); el.appendChild(actions);
+        listEl.appendChild(el);
+      });
+      saveToStorage();
+    }
+
+    // ✅ 리스트 전체(drop 가능 영역)
+    listEl.addEventListener('dragover', e=>{
+      e.preventDefault();
+      listEl.classList.add('drag-over');
+    });
+    listEl.addEventListener('dragleave', ()=> listEl.classList.remove('drag-over'));
+    listEl.addEventListener('drop', e=>{
+      e.preventDefault();
+      listEl.classList.remove('drag-over');
+      if(dragSrcIndex!==null){
+        const moved = tasks.splice(dragSrcIndex,1)[0];
+        tasks.push(moved); // 마지막에 추가
+        render(); saveToStorage();
+      }
+    });
+
+    function addTask(title,note,priority){
+      tasks.unshift({id:crypto.randomUUID(), title, note, priority, done:false});
+      render();
+    }
+    function removeTask(id){tasks=tasks.filter(t=>t.id!==id); render();}
+    function toggle(id){tasks=tasks.map(t=>t.id===id?{...t,done:!t.done}:t); render();}
+    function startEdit(id){
+      const task=tasks.find(t=>t.id===id);
+      if(!task) return;
+      editId=id;
+      input.value=task.title;
+      noteInput.value=task.note;
+      prioritySel.value=task.priority;
+    }
+    function saveEdit(title,note,priority){
+      tasks=tasks.map(t=>t.id===editId?{...t,title,note,priority}:t);
+      editId=null;
+      render();
+    }
+    form.addEventListener('submit',e=>{
+      e.preventDefault();
+      const title=input.value.trim();
+      const note=noteInput.value.trim();
+      const priority=prioritySel.value;
+      if(!title) return;
+      if(editId){
+        saveEdit(title,note,priority);
+      }else{
+        addTask(title,note,priority);
+      }
+      form.reset(); saveToStorage();
+    });
+    sortSel.addEventListener('change', ()=> render() );
+    autoSortBtn.addEventListener('click', ()=>{
+      tasks = sortTasks(tasks); render(); saveToStorage();
+    });
+    render();
+  </script>
+</body>
+</html>

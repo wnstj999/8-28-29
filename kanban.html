@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>🌌 꿈의 칸반보드</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: "Pretendard", "Noto Sans KR", sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f4f4f4;
+      color: #333;
+      transition: all 0.3s;
+    }
+    body.neon {
+      background: linear-gradient(135deg, #ff00cc, #3333ff);
+      color: #fff;
+    }
+    body.crt {
+      background: #111;
+      color: #0f0;
+      font-family: "Courier New", monospace;
+      text-shadow: 0 0 2px #0f0;
+    }
+    h1 { text-align: center; margin-bottom: 20px; }
+    .toolbar {
+      text-align: center; margin-bottom: 20px;
+    }
+    .toolbar button {
+      margin: 0 5px; padding: 8px 14px;
+      border: none; border-radius: 6px;
+      background: #333; color: #fff; cursor: pointer;
+    }
+    .board {
+      display: flex; gap: 20px;
+      justify-content: center; align-items: flex-start; flex-wrap: wrap;
+    }
+    .column {
+      flex: 1; min-width: 220px;
+      background: white; border: 1px solid #ccc;
+      border-radius: 6px; padding: 10px;
+      min-height: 400px;
+    }
+    body.neon .column {
+      background: rgba(0,0,0,0.7);
+      border: 2px solid #00f0ff;
+      box-shadow: 0 0 15px #ff00f0, 0 0 25px #00f0ff;
+      color: #0ff;
+    }
+    body.crt .column {
+      background: #000; border: 1px solid #0f0;
+    }
+    .task {
+      padding: 10px; margin: 8px 0;
+      background: #f1f5f9; border-radius: 6px;
+      border: 1px solid #ddd; cursor: grab;
+      position: relative;
+    }
+    .task:hover { background: #e0f2fe; }
+    body.neon .task { background: #111; border: 1px solid #555; color: #0ff; }
+    body.crt .task { background: #000; border: 1px solid #0f0; }
+    .delete-btn {
+      position: absolute; right: 8px; top: 8px;
+      background: #ff0055; border: none; color: white;
+      font-weight: bold; border-radius: 4px; padding: 2px 6px; cursor: pointer;
+    }
+    .task-title { font-weight: bold; }
+    .task-meta { font-size: 12px; margin-top: 5px; }
+    .tag { display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;}
+    .backend { background:#1791DD; color:#fff; }
+    .design { background:#f97316; color:#fff; }
+    .urgent { background:#ef4444; color:#fff; }
+    .charts { margin-top:40px; display:flex; justify-content:space-around; flex-wrap:wrap; }
+    canvas { background:#fff; border-radius:8px; padding:10px; }
+  </style>
+</head>
+<body>
+  <h1>🌌 꿈의 칸반보드</h1>
+  <div class="toolbar">
+    <button onclick="toggleMode('neon')">🌙 네온 모드</button>
+    <button onclick="toggleMode('crt')">🕹 CRT 모드</button>
+    <button onclick="toggleMode()">☀️ 기본 모드</button>
+  </div>
+
+  <div class="board">
+    <div class="column" id="backlog"><h2>백로그</h2></div>
+    <div class="column" id="todo"><h2>해야 할 일</h2></div>
+    <div class="column" id="inprogress"><h2>진행 중</h2></div>
+    <div class="column" id="review"><h2>리뷰</h2></div>
+    <div class="column" id="done"><h2>완료 🎉</h2></div>
+  </div>
+
+  <div class="charts">
+    <canvas id="progressChart" width="200" height="200"></canvas>
+    <canvas id="statusChart" width="200" height="200"></canvas>
+  </div>
+
+  <script>
+    let draggedItem = null;
+
+    function toggleMode(mode) {
+      document.body.className = "";
+      if(mode) document.body.classList.add(mode);
+    }
+
+    function createTask(title, assignee, date, tag, columnId) {
+      const taskEl = document.createElement("div");
+      taskEl.className = "task";
+      taskEl.draggable = true;
+      taskEl.innerHTML = `
+        <div class="task-title">${title}</div>
+        <div class="task-meta">
+          👤 ${assignee || "미정"} | 📅 ${date || "-"}
+          ${tag ? `<span class="tag ${tag}">${tag}</span>` : ""}
+        </div>
+        <button class="delete-btn">X</button>
+      `;
+      taskEl.querySelector(".delete-btn").onclick = () => { taskEl.remove(); updateCharts(); };
+      addDragEvents(taskEl);
+      document.getElementById(columnId).appendChild(taskEl);
+      updateCharts();
+    }
+
+    function addDragEvents(taskEl) {
+      taskEl.addEventListener("dragstart", () => {
+        draggedItem = taskEl;
+        setTimeout(()=> taskEl.style.display="none",0);
+      });
+      taskEl.addEventListener("dragend", () => {
+        draggedItem.style.display="block"; draggedItem=null;
+        updateCharts();
+      });
+    }
+
+    document.querySelectorAll(".column").forEach(col => {
+      col.addEventListener("dragover", (e)=>{e.preventDefault(); col.classList.add("drag-over");});
+      col.addEventListener("dragleave", ()=>col.classList.remove("drag-over"));
+      col.addEventListener("drop", ()=> {
+        col.classList.remove("drag-over");
+        if(draggedItem) col.appendChild(draggedItem);
+        updateCharts();
+      });
+    });
+
+    // 기본 데이터
+    createTask("결제 모듈 개발","지훈","2025-09-05","backend","todo");
+    createTask("UI 색상 수정","민지","2025-09-03","design","inprogress");
+    createTask("버그 리포트 처리","영수","2025-09-02","urgent","review");
+
+    // Chart.js 대시보드
+    let progressChart = new Chart(document.getElementById("progressChart"), {
+      type: "doughnut",
+      data: { labels:["완료","미완료"], datasets:[{data:[0,0], backgroundColor:["#22c55e","#e5e7eb"]}] },
+      options:{plugins:{legend:{position:"bottom"}}}
+    });
+
+    let statusChart = new Chart(document.getElementById("statusChart"), {
+      type: "bar",
+      data: { labels:["Backlog","ToDo","InProgress","Review","Done"], datasets:[{label:"Tasks",data:[0,0,0,0,0], backgroundColor:"#3b82f6"}]},
+      options:{scales:{y:{beginAtZero:true}}}
+    });
+
+    function updateCharts(){
+      const cols=["backlog","todo","inprogress","review","done"];
+      const counts=cols.map(id=>document.getElementById(id).querySelectorAll(".task").length);
+      statusChart.data.datasets[0].data=counts;
+      statusChart.update();
+      const done=counts[4];
+      const total=counts.reduce((a,b)=>a+b,0);
+      progressChart.data.datasets[0].data=[done,total-done];
+      progressChart.update();
+    }
+    updateCharts();
+  </script>
+</body>
+</html>

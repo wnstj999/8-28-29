@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>게시판 글쓰기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #title input[required]{
+            border:1px solid red;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-lg">
+        <a href="http://www.naver.com">Naver</a> <br>
+        <h1 class="text-2xl font-bold mb-6 text-center text-blue-600">:메모: 게시판 글쓰기</h1>
+        <form id="postForm" class="space-y-6">
+            <!-- 글쓴이 (select) -->
+            <div>
+                <label for="author" class="block text-sm font-medium text-gray-700">글쓴이</label>
+                <select id="author" name="author"
+                    class="author mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    required>
+                </select>
+            </div>
+            <!-- 제목 -->
+            <div>
+                <label for="title" class="block text-sm font-medium text-gray-700">제목</label>
+                <input type="text" id="title" name="title" placeholder="제목 입력"
+                    class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    required pattern="^.{2,50}$" title="제목은 최소 2자, 최대 50자까지 가능합니다.">
+            </div>
+            <!-- 내용 -->
+            <div>
+                <label for="content" class="block text-sm font-medium text-gray-700">내용</label>
+                <textarea id="content" name="content" rows="5" placeholder="내용 입력"
+                    class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    required pattern="^.{5,500}$" title="내용은 최소 5자, 최대 500자까지 입력 가능합니다."></textarea>
+            </div>
+            <!-- 공개 여부 (라디오 버튼) -->
+            <div>
+                <span class="block text-sm font-medium text-gray-700 mb-2">공개 여부</span>
+                <div class="flex space-x-4">
+                    <!-- 공개 -->
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="visibility" value="public" class="hidden peer" required>
+                        <div
+                            class="w-5 h-5 rounded-full border border-gray-400 flex items-center justify-center peer-checked:border-blue-600">
+                            <div class="w-2.5 h-2.5 rounded-full bg-transparent peer-checked:bg-blue-600"></div>
+                        </div>
+                        <span class="ml-2 text-gray-700 peer-checked:text-blue-600 font-medium">공개</span>
+                    </label>
+                    <!-- 비공개 -->
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="visibility" value="private" class="hidden peer">
+                        <div
+                            class="w-5 h-5 rounded-full border border-gray-400 flex items-center justify-center peer-checked:border-blue-600">
+                            <div class="w-2.5 h-2.5 rounded-full bg-transparent peer-checked:bg-blue-600"></div>
+                        </div>
+                        <span class="ml-2 text-gray-700 peer-checked:text-blue-600 font-medium">비공개</span>
+                    </label>
+                </div>
+            </div>
+            <!-- 게시물 종류 (체크박스 → 토글 버튼 스타일) -->
+            <div>
+                <span class="block text-sm font-medium text-gray-700 mb-2">게시물 종류</span>
+                <div class="flex space-x-4">
+                    <!-- 공지 -->
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="category" value="notice" class="hidden peer">
+                        <div
+                            class="px-4 py-2 border rounded-lg text-gray-700 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600">
+                            공지
+                        </div>
+                    </label>
+                    <!-- 이벤트 -->
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="category" value="event" class="hidden peer">
+                        <div
+                            class="px-4 py-2 border rounded-lg text-gray-700 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-600">
+                            이벤트
+                        </div>
+                    </label>
+                    <!-- 일반 -->
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="category" value="general" class="hidden peer">
+                        <div
+                            class="px-4 py-2 border rounded-lg text-gray-700 peer-checked:bg-gray-700 peer-checked:text-white peer-checked:border-gray-700">
+                            일반
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <!-- 버튼 -->
+            <div class="flex justify-end space-x-3">
+                <button type="reset" class="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">
+                    취소
+                </button>
+                <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    등록
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        // -------------------------------
+        // localStorage에 글쓴이 데이터 저장
+        // -------------------------------
+        const authors = ["홍길동", "김철수", "이영희"];
+        if (!localStorage.getItem("authors")) {
+            localStorage.setItem("authors", JSON.stringify(authors));
+        }
+        // select에 옵션 추가
+        const authorSelect = document.getElementById("author");
+        const savedAuthors = JSON.parse(localStorage.getItem("authors"));
+        savedAuthors.forEach(name => {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            authorSelect.appendChild(option);
+        });
+        // -------------------------------
+        // Form 제출 이벤트
+        // -------------------------------
+        document.getElementById("postForm").addEventListener("submit", function (e) {
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                alert("입력값을 확인해주세요!");
+            } else {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const data = Object.fromEntries(formData.entries());
+                data.category = formData.getAll("category"); // 체크박스 여러 개
+                console.log("제출 데이터:", JSON.stringify(data, null, 2));
+                alert("게시물이 등록되었습니다!");
+            }
+        });
+    </script>
+    <script>
+        document.getElementById("postForm").addEventListener("submit", function (e) {
+            e.preventDefault(); // 기본 제출 막기
+            const elements = this.elements;
+            console.log("===== Form Elements 상세 출력 =====");
+            for (let el of elements) {
+                if (!el.name && !el.id) continue; // name, id 둘 다 없으면 패스
+                let info = `[${el.tagName}] id="${el.id}" name="${el.name}" type="${el.type}"`;
+                if (el.type === "checkbox") {
+                    info += ` | value="${el.value}" | checked=${el.checked}`;
+                } else if (el.type === "radio") {
+                    info += ` | value="${el.value}" | checked=${el.checked}`;
+                } else {
+                    info += ` | value="${el.value}"`;
+                }
+                console.log(info);
+            }
+            console.log("================================");
+            author_print();
+        });
+    </script>
+    <script>
+        function author_print() {
+            console.log("author_print -- getElementById - ", document.getElementById("author1"))
+            console.log("author_print -- getElementsByName - ", document.getElementsByName("author1"))
+            console.log("author_print -- getElementsByClassName - ", document.getElementsByClassName("author1"))
+            console.log("author_print -- querySelector - ", document.querySelector("#title"))
+        }
+    </script>
+</body>
+</html>
